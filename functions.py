@@ -136,7 +136,7 @@ def Sparse_SYK(L , N, J):
    M = states_gen(L, N)
    dim = M.shape[0]
    M = (M.dot(M.T))
-   M = M - (N-2)*np.ones((dim, dim))
+   M = M - (N-3)*np.ones((dim, dim))
    M = np.clip(M, 0, N)
    indi = M.nonzero()
    data = np.random.normal(0, J, (indi[0].shape[0]))
