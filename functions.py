@@ -129,7 +129,9 @@ class NeuralNetwork(nn.Module):
 
 
 def H_SYK(L, N, J):
-    return Sparse_SYK(L, N, J).todense()
+    H = Sparse_SYK(L, N, J).todense()
+    H = np.triu(H)+ np.triu(H).T - np.diag(np.diagonal(H))
+    return H
 
 def Sparse_SYK(L , N, J):
    N = int(L/2)
@@ -156,18 +158,19 @@ def E_loss(output, H):
 
 def Simple_training(n_epoch, optimizer, seq_modules, Loss, input_states, H, Eg, max_it, precision):
     Delta = Eg
+    
     i = 0
-    print("hi")
     while abs(Delta) > abs(Eg)/precision:
+
       print("At iteration:", i)
       for epoch in range(n_epoch):  # loop over the dataset multiple times
-        
+        print("epoch", epoch)
         # (1) Initialise gradients
         optimizer.zero_grad()
         # (2) Forward pass
         outputs = seq_modules(input_states)
         loss = Loss(outputs, H)
-        if epoch == 199:
+        if epoch == n_epoch-1:
             print("Exact Eg = ", Eg)
             #print("First_entry :", v0)
             print("Temporary_energy:", loss)
@@ -179,8 +182,9 @@ def Simple_training(n_epoch, optimizer, seq_modules, Loss, input_states, H, Eg, 
         # (4) Compute the loss and update the weights
         optimizer.step()
         Delta = Eg - loss
-        i += 1
-        if i > max_it:
+      i += 1
+      if i > max_it:
+            print("Maximal_iterations exceeded")
             break
     print("Final Energy", loss) 
 

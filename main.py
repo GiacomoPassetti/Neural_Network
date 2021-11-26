@@ -19,11 +19,12 @@ J = 1
 # NN Parameters
 net_dim = 256
 
-layers = 3
-lr = 0.1
-n_epoch = 1000
-max_it = 10
-precision = 1000
+layers = 4
+lr = 0.01
+n_epoch = 50
+
+max_it = 200
+precision = 100
 momentum = 1
 
 # The full basis representation
