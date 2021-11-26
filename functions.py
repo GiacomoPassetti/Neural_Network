@@ -196,5 +196,30 @@ def seq_modules(input_d, netdim, layers):
                 return seq_mod
     
 
+# The following vector will have to be produced only one time at the beginning of the run
+def bin_scale(L):
+    bin = []
+    for i in range(2*L):
+        bin.append(2**(2*L-1-i))
+    bin = np.array(bin)
+    return bin
+
+def bin_convertion(v1, v2, bin_scale):
+    ordering_number = np.append(v1, v2).dot(bin_scale)
+    return ordering_number
+
+def H_syk_element(v1, v2, bin_scale, seed, J):
+    element_seed = bin_convertion(v1, v2, bin_scale)
+    np.random.seed(seed*element_seed)
+    return np.random.normal(0, J)
+
+
+
+
+
+
+
+
+
 
 

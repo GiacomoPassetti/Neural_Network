@@ -20,7 +20,7 @@ J = 1
 net_dim = 256
 
 layers = 3
-lr = 1
+lr = 0.1
 n_epoch = 1000
 max_it = 10
 precision = 1000
