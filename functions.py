@@ -218,11 +218,39 @@ def H_syk_element(v1, v2, bin_scale, seed, J):
     return np.random.normal(0, J)
 
 
+# FUNCTIONS THAT IMPLEMENTS THE ALLOWED TWO PARTICLES TRANSITIONS
 
+def single_transition_gen(vec, L, N):
+    inverse = torch.diag(torch.ones(L)-vec)
+    annih = torch.diag(vec)
+    grid = torch.tile(vec, (N**2, 1))
+    annih = annih[~torch.all(annih == 0, axis=1)]
+    inverse = inverse[~torch.all(inverse == 0, axis=1)]
+    annih = torch.kron(torch.ones(N), annih).reshape(N**2, L)
+    inverse = torch.tile(inverse, (N, 1))
 
+    grid = grid - annih + inverse 
+    return torch.unbind(grid)
 
+def single_transition_to_stack(vec):
+    L = vec.shape[0]
+    N = int(L/2)
 
+    inverse = torch.diag(torch.ones(L)-vec)
+    annih = torch.diag(vec)
+    grid = torch.tile(vec, (N**2, 1))
+    annih = annih[~torch.all(annih == 0, axis=1)]
+    inverse = inverse[~torch.all(inverse == 0, axis=1)]
+    annih = torch.kron(torch.ones(N), annih).reshape(N**2, L)
+    inverse = torch.tile(inverse, (N, 1))
 
+    grid = grid - annih + inverse 
+    return grid
+
+def complete_transitions(vec, L, N):
+  vecs = single_transition_gen(vec, L, N)
+  out = torch.stack(tuple(map(single_transition_to_stack, vecs))).reshape((N**4, L))
+  return torch.unique(out, dim = 0)
 
 
 
