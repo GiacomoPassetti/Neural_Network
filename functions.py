@@ -5,6 +5,7 @@ import copy
 import random
 from scipy.linalg import eigh
 import matplotlib.pyplot as plt
+import scipy
 import os
 import torch
 from torch import nn
@@ -129,9 +130,20 @@ class NeuralNetwork(nn.Module):
 
 
 def H_SYK(L, N, J):
-    H = Sparse_SYK(L, N, J).todense()
-    H = np.triu(H)+ np.triu(H).T - np.diag(np.diagonal(H))
-    return H
+   N = int(L/2)
+   M = states_gen(L, N)
+   dim = M.shape[0]
+   M = (M.dot(M.T))
+   M = M - (N-3)*np.ones((dim, dim))
+   M = np.clip(M, 0, N)
+   indi = M.nonzero()
+   data = np.random.normal(0, J, (indi[0].shape[0]))
+   H = coo_matrix((data, indi), shape = (dim, dim))
+   H = H.todense()
+   
+   H = (4*(np.triu(H)+ np.triu(H).T) - (4*np.diag(H)))/((2*L)**(3/2))
+   
+   return H
 
 def Sparse_SYK(L , N, J):
    N = int(L/2)
@@ -143,6 +155,10 @@ def Sparse_SYK(L , N, J):
    indi = M.nonzero()
    data = np.random.normal(0, J, (indi[0].shape[0]))
    H = coo_matrix((data, indi), shape = (dim, dim))
+   H = H.todense()
+   
+   H = (4*(np.triu(H)+ np.triu(H).T) - (4*np.diag(H)))/((2*L)**(3/2))
+   H = scipy.sparse.csc_matrix(H)
    return H
 
 def E_loss(output, H):
@@ -251,7 +267,4 @@ def complete_transitions(vec, L, N):
   vecs = single_transition_gen(vec, L, N)
   out = torch.stack(tuple(map(single_transition_to_stack, vecs))).reshape((N**4, L))
   return torch.unique(out, dim = 0)
-
-
-
 
