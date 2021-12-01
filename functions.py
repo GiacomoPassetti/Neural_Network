@@ -141,7 +141,9 @@ def H_SYK(L, N, J):
    H = coo_matrix((data, indi), shape = (dim, dim))
    H = H.todense()
    
-   H = (4*(np.triu(H)+ np.triu(H).T) - (4*np.diag(H)))/((2*L)**(3/2))
+   
+
+   H = (np.triu(H)+ np.triu(H).T - np.diag(np.diag(H)))*(4/((2*L)**(3/2)))
    
    return H
 
@@ -153,11 +155,12 @@ def Sparse_SYK(L , N, J):
    M = M - (N-3)*np.ones((dim, dim))
    M = np.clip(M, 0, N)
    indi = M.nonzero()
+   
    data = np.random.normal(0, J, (indi[0].shape[0]))
    H = coo_matrix((data, indi), shape = (dim, dim))
    H = H.todense()
    
-   H = (4*(np.triu(H)+ np.triu(H).T) - (4*np.diag(H)))/((2*L)**(3/2))
+   H = (np.triu(H)+ np.triu(H).T - np.diag(np.diag(H)))/(4/((2*L)**(3/2)))
    H = scipy.sparse.csc_matrix(H)
    return H
 
