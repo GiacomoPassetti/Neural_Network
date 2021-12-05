@@ -160,7 +160,7 @@ def Sparse_SYK(L , N, J):
    H = coo_matrix((data, indi), shape = (dim, dim))
    H = H.todense()
    
-   H = (np.triu(H)+ np.triu(H).T - np.diag(np.diag(H)))/(4/((2*L)**(3/2)))
+   H = (np.triu(H)+ np.triu(H).T - np.diag(np.diag(H)))*(4/((2*L)**(3/2)))
    H = scipy.sparse.csc_matrix(H)
    return H
 

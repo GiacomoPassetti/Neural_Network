@@ -3,20 +3,38 @@ from scipy.sparse.linalg import eigsh, eigs
 import numpy as np
 from scipy.linalg import eigh
 import torch
+import scipy
 
-device = 'cuda' if torch.cuda.is_available() else 'cpu'
-print('Using {} device'.format(device))
 
-L = 16
-N = int(L/2)
+
+
 J = 1
 
+a = [1]
+np.save("a.npy", a)
 
-H1 = torch.tensor(H_SYK(L, N, J))
-u, v = torch.linalg.eigh(H1)
+energies = []
+dev_st = []
+for L in list(np.arange(4, 16, 2)):
+     N = int(L/2)
+     batch = []
+     for i in range(20):
+         print(i)
+         H1 = H_SYK(L, N, J)
+         H2 = scipy.sparse.csc_matrix(H1)
+         u, v = eigsh(H1,1 , which = 'SA')
+         
 
+         batch.append(u[0]/L)
+         print(u[0]/L)
+     dev = np.std(batch)
+     energy = sum(batch)/len(batch)
+     print(energy)
+     energies.append(energy)
+     dev_st.append(dev)
 
-print(u[0]/L)
+np.save("energy_up_to_14_20avgs.npy", energies)
+np.save("std_up_to_14_20avgs.npy", dev_st)
 
 
 

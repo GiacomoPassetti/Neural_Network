@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 
 def single_trans(states):
     """
@@ -64,12 +65,56 @@ def double_trans(states):
 
     # now reshaping again to separate batch dim from transition states
     double_trans_states = double_trans_states.transpose(1,2).reshape(batch_size,-1,L).transpose(1,2)
+    double_trans_states = torch.unique(double_trans_states, dim = 2)
     return double_trans_states
 
 
+def seed_matrix(states, transitions):
+        """
+        This takes as input the batch containing the trial states and their possible double transitions. It the matrix containing the seeds to generate the syk hamiltonian.
+        """
+        L = states.shape[1]
+        batch_size = states.shape[0]
+        num_trans = transitions.shape[2]
+        bin = torch.flipud(2**torch.arange(0, L, 1))
+        
+        NMax = (torch.tensordot(torch.ones(L, dtype=torch.long),bin, dims = ([0], [0])))
+        print(NMax)
+        
+        # The transitions tensor get converted to the decimal base by contracting their L dimension. States gets repeated num_trans times to allow the states sorting. 
+        
+        trans_converted = torch.tensordot(transitions, bin, dims = ([1], [0]))
+        
+        # trans_converted now has along the [0] dimension the the coupled elements to evaluate 
+        trans_converted = torch.stack((torch.tensordot(states.reshape(batch_size, L, 1).repeat(1, 1, num_trans), bin , dims= ([1], [0])), trans_converted), dim = 0)
+        
+        # trans_converted gets sorted along dim = 0
+        trans_converted = torch.sort(trans_converted, dim = 0)[0]    
+
+        # Expansion necessary to avoiod redundancies
+        trans_converted[0, :] = NMax*trans_converted[0, :]
+
+        # Final seed matrix:
+
+        trans_converted = torch.sum(trans_converted, dim = 0)
+        
+        return trans_converted
+
+def dumb_syk_transitions( seed_matrix, seed, L ):
+    H_syk = torch.zeros(seed_matrix.shape)
+    for i in range(seed_matrix.shape[0]):
+        for j in range(seed_matrix.shape[1]):
+            np.random.seed(seed_matrix[i, j]*seed)
+            
+            H_syk[i, j] = np.random.normal(0, 1)
+            print(H_syk[i, j])
+    return H_syk
+
+        
 
 
 if __name__ == '__main__':
     states = torch.tensor([[1,1,0,0],[1,0,0,1]])
-    print(states)
-    print(double_trans(states))
+    trans = double_trans(states)
+    seeds = seed_matrix(states, trans)
+    syk = dumb_syk_transitions(seeds, 1, 4)
