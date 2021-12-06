@@ -207,6 +207,41 @@ def Simple_training(n_epoch, optimizer, seq_modules, Loss, input_states, H, Eg, 
             break
     print("Final Energy", loss) 
 
+def training_batches(n_epoch, optimizer, seq_modules, input_states, trans_states, syk, Eg, max_it, precision):
+    Delta = Eg
+    
+    i = 0
+    while abs(Delta) > abs(Eg)/precision:
+
+      print("At iteration:", i)
+      for epoch in range(n_epoch):  # loop over the dataset multiple times
+        print("epoch", epoch)
+        # (1) Initialise gradients
+        optimizer.zero_grad()
+        # (2) Forward pass
+        output1 = seq_modules(input_states.type(torch.float))
+        output2 = seq_modules(torch.reshape(trans_states.type(torch.float), (trans_states.shape[0]*trans_states.shape[1], trans_states.shape[2])))
+        output2 = torch.reshape(output2 , (trans_states.shape[0], trans_states.shape[1]))
+        norm = torch.tensordot(output1, output1, ([0], [0]))
+        Energy = torch.sum(torch.mul(output1 ,torch.sum(torch.mul(syk, output2), dim = 1)))/norm
+        if epoch == n_epoch-1:
+            print("Exact Eg = ", Eg)
+            #print("First_entry :", v0)
+            print("Temporary_energy:", Energy)
+            
+            #print("Temporary <Psi|n> :", outputs[:]/norm ,outputs[:]/norm)
+
+        # (3) Backward
+        Energy.backward()
+        # (4) Compute the loss and update the weights
+        optimizer.step()
+        Delta = Eg - Energy
+      i += 1
+      if i > max_it:
+            print("Maximal_iterations exceeded")
+            break
+    print("Final Energy", Energy) 
+
 def seq_modules(input_d, netdim, layers):
                 flatten = nn.Flatten()
                 nets = [flatten,nn.Linear(input_d,  netdim),nn.ReLU()]

@@ -78,8 +78,8 @@ def seed_matrix(states, transitions):
         num_trans = transitions.shape[2]
         bin = torch.flipud(2**torch.arange(0, L, 1))
         
-        NMax = (torch.tensordot(torch.ones(L, dtype=torch.long),bin, dims = ([0], [0])))
-        print(NMax)
+        NMax = (torch.tensordot(torch.ones(L, dtype = torch.long),bin, dims = ([0], [0])))
+        
         
         # The transitions tensor get converted to the decimal base by contracting their L dimension. States gets repeated num_trans times to allow the states sorting. 
         
@@ -107,7 +107,7 @@ def dumb_syk_transitions( seed_matrix, seed, L ):
             np.random.seed(seed_matrix[i, j]*seed)
             
             H_syk[i, j] = np.random.normal(0, 1)
-            print(H_syk[i, j])
+            
     return H_syk
 
         
@@ -115,6 +115,7 @@ def dumb_syk_transitions( seed_matrix, seed, L ):
 
 if __name__ == '__main__':
     states = torch.tensor([[1,1,0,0],[1,0,0,1]])
+    print(states.dtype)
     trans = double_trans(states)
     seeds = seed_matrix(states, trans)
     syk = dumb_syk_transitions(seeds, 1, 4)
