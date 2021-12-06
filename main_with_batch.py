@@ -1,5 +1,5 @@
 import torch
-from functions import states_gen, seq_modules, H_SYK, training_batches
+from functions import states_gen, seq_modules, H_SYK, training_batches, E_loss
 from calc_trans_states import double_trans, seed_matrix, dumb_syk_transitions
 from torch.linalg import eigh
 
@@ -9,11 +9,9 @@ print('Using {} device'.format(device))
 
 seed = 1
 
-
-
 #region Parameters
 # Physical parameters of the SYK Model
-L = 10
+L = 8
 N = int(L/2)
 J = 1
 # NN Parameters
@@ -34,31 +32,20 @@ momentum = 1
 H = torch.tensor(H_SYK(L, N, J), dtype=torch.float)
 u, v = eigh (H)
 
+
 input_states = torch.tensor(states_gen(L, N), dtype=torch.long)
 trans_states = double_trans(input_states)
-syk = dumb_syk_transitions(seed_matrix(input_states, trans_states), seed, L)
+syk = dumb_syk_transitions(seed_matrix(input_states, trans_states), seed)
+
 trans_states = torch.transpose(trans_states, 1, 2)
 Net = seq_modules(L, net_dim, layers)
 optimizer = torch.optim.Adam(Net.parameters(), lr)
 
 
 
-training_batches(n_epoch, optimizer, Net, input_states, trans_states, syk, u[0], max_it, precision)
+training_batches(n_epoch, optimizer, Net, input_states, trans_states, syk, u[0], max_it, precision, H)
 
-"""
-output1 = torch.squeeze(Net(input_states.type(torch.float)))
-output2 = Net(torch.reshape(trans_states.type(torch.float), (trans_states.shape[0]*trans_states.shape[1], trans_states.shape[2])))
-output2 = torch.reshape(output2 , (trans_states.shape[0], trans_states.shape[1]))
 
-Energy = torch.sum(torch.mul(output1 ,torch.sum(torch.mul(syk, output2), dim = 1)))
-
-optimizer.zero_grad()
-
-Energy.backward()
-
-optimizer.step()
-Delta = Energy 
-"""
 
 
 

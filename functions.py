@@ -207,7 +207,7 @@ def Simple_training(n_epoch, optimizer, seq_modules, Loss, input_states, H, Eg, 
             break
     print("Final Energy", loss) 
 
-def training_batches(n_epoch, optimizer, seq_modules, input_states, trans_states, syk, Eg, max_it, precision):
+def training_batches(n_epoch, optimizer, seq_modules, input_states, trans_states, syk, Eg, max_it, precision, H):
     Delta = Eg
     
     i = 0
@@ -222,7 +222,10 @@ def training_batches(n_epoch, optimizer, seq_modules, input_states, trans_states
         output1 = seq_modules(input_states.type(torch.float))
         output2 = seq_modules(torch.reshape(trans_states.type(torch.float), (trans_states.shape[0]*trans_states.shape[1], trans_states.shape[2])))
         output2 = torch.reshape(output2 , (trans_states.shape[0], trans_states.shape[1]))
+        
         norm = torch.tensordot(output1, output1, ([0], [0]))
+        print("norm :", norm)
+        print("Energy with respect to the other hamiltonian : ", E_loss(output1, H))
         Energy = torch.sum(torch.mul(output1 ,torch.sum(torch.mul(syk, output2), dim = 1)))/norm
         if epoch == n_epoch-1:
             print("Exact Eg = ", Eg)
