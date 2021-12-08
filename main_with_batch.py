@@ -11,7 +11,7 @@ seed = 1
 
 #region Parameters
 # Physical parameters of the SYK Model
-L = 4
+L = 10
 N = int(L/2)
 J = 1
 
@@ -43,7 +43,7 @@ trans_states = trans_unique(trans_states)
 print(trans_states.shape)
 
 
-syk = dumb_syk_transitions(seed_matrix(input_states, trans_states), seed)
+syk = dumb_syk_transitions(seed_matrix(input_states, trans_states), seed, L)
 
 trans_states = torch.transpose(trans_states, 1, 2)
 Net = seq_modules(L, net_dim, layers)

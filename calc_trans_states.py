@@ -104,13 +104,13 @@ def seed_matrix(states, transitions):
         
         return trans_converted
 
-def dumb_syk_transitions( seed_matrix, seed ):
+def dumb_syk_transitions( seed_matrix, seed, L ):
     H_syk = torch.zeros(seed_matrix.shape)
     for i in range(seed_matrix.shape[0]):
         for j in range(seed_matrix.shape[1]):
             np.random.seed(seed_matrix[i, j]*seed)
             
-            H_syk[i, j] = np.random.normal(0, 1)
+            H_syk[i, j] = np.random.normal(0, 1)*(4/((2*L)**(3/2)))
             
     return H_syk
 
