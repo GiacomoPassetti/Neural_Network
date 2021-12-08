@@ -51,7 +51,7 @@ optimizer = torch.optim.Adam(Net.parameters(), lr)
 
 
 
-#training_batches(n_epoch, optimizer, Net, input_states, trans_states, syk, u[0], max_it, precision, H)
+training_batches(n_epoch, optimizer, Net, input_states, trans_states, syk, u[0], max_it, precision, H)
 
 
 

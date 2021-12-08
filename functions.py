@@ -14,7 +14,7 @@ from torchvision import datasets, transforms
 from scipy.sparse import coo_matrix, csr_matrix
 
 
-
+#region ED SYK model
 
 
 def states_gen(L,N):
@@ -104,31 +104,6 @@ def H_rd(L, N):
 
 
 
-
-
-
-
-
-
-class NeuralNetwork(nn.Module):
-    def __init__(self):
-        super(NeuralNetwork, self).__init__()
-        self.flatten = nn.Flatten()
-        self.linear_relu_stack = nn.Sequential(
-            nn.Linear(10, 256),
-            nn.ReLU(),
-            nn.Linear(256, 256),
-            nn.ReLU(),
-            nn.Linear(256, 1),
-            nn.Sigmoid()
-        )
-
-    def forward(self, x):
-        x = self.flatten(x)
-        logits = self.linear_relu_stack(x)
-        return logits
-
-
 def H_SYK(L, N, J):
    N = int(L/2)
    M = states_gen(L, N)
@@ -164,6 +139,12 @@ def Sparse_SYK(L , N, J):
    H = scipy.sparse.csc_matrix(H)
    return H
 
+
+
+#endregion
+
+#region Training scripts
+
 def E_loss(output, H):
     loss = torch.tensordot(H,output,([1],[0]))
     loss = torch.tensordot(output,loss,([0],[0]))
@@ -173,7 +154,6 @@ def E_loss(output, H):
     loss = (1/norm)*loss
  
     return torch.squeeze(loss)
-
 
 def Simple_training(n_epoch, optimizer, seq_modules, Loss, input_states, H, Eg, max_it, precision):
     Delta = Eg
@@ -246,6 +226,27 @@ def training_batches(n_epoch, optimizer, seq_modules, input_states, trans_states
             print("Maximal_iterations exceeded")
             break
     print("Final Energy", Energy) 
+#endregion
+
+
+#region Networks generators
+class NeuralNetwork(nn.Module):
+    def __init__(self):
+        super(NeuralNetwork, self).__init__()
+        self.flatten = nn.Flatten()
+        self.linear_relu_stack = nn.Sequential(
+            nn.Linear(10, 256),
+            nn.ReLU(),
+            nn.Linear(256, 256),
+            nn.ReLU(),
+            nn.Linear(256, 1),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        x = self.flatten(x)
+        logits = self.linear_relu_stack(x)
+        return logits
 
 def seq_modules(input_d, netdim, layers):
                 flatten = nn.Flatten()
@@ -257,9 +258,12 @@ def seq_modules(input_d, netdim, layers):
                 
                 seq_mod = nn.Sequential(*nets)
                 return seq_mod
-    
+#endregion
 
 # The following vector will have to be produced only one time at the beginning of the run
+
+
+#region Transitions SYK generators
 def bin_scale(L):
     bin = []
     for i in range(2*L):
@@ -275,9 +279,6 @@ def H_syk_element(v1, v2, bin_scale, seed, J):
     element_seed = bin_convertion(v1, v2, bin_scale)
     np.random.seed(seed*element_seed)
     return np.random.normal(0, J)
-
-
-# FUNCTIONS THAT IMPLEMENTS THE ALLOWED TWO PARTICLES TRANSITIONS
 
 def single_transition_gen(vec, L, N):
     inverse = torch.diag(torch.ones(L)-vec)
@@ -312,6 +313,10 @@ def complete_transitions(vec, L, N):
   return torch.unique(out, dim = 0)
 
 def trans_unique(trans_states):
+    """
+    This accepts tensors containg the allowed two particles transitions with shape [Batch, L, k] and shrinks along the k dimension eliminating the redundant states.
+    returns tensor with shape [Batch, L, Batch_2nd_ord_transitions].
+    """
     L = trans_states.shape[1]
     bin = torch.flipud(2**torch.arange(0, L, 1))
     trans_states = torch.tensordot(trans_states, bin, dims = ([1], [0]))
@@ -328,3 +333,4 @@ def trans_unique(trans_states):
       out.append(torch.div(trans_states,(2**i), rounding_mode= 'floor'))
     trans_states = torch.stack(out, dim = 1)%2
     return trans_states
+#endregion
