@@ -65,7 +65,11 @@ def double_trans(states):
 
     # now reshaping again to separate batch dim from transition states
     double_trans_states = double_trans_states.transpose(1,2).reshape(batch_size,-1,L).transpose(1,2)
-    double_trans_states = torch.unique(double_trans_states, dim = 2)
+    
+    
+    #double_trans_states = torch.unique(double_trans_states, dim = 2)
+    
+    
     return double_trans_states
 
 

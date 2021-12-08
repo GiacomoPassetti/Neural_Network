@@ -1,5 +1,5 @@
 import torch
-from functions import states_gen, seq_modules, H_SYK, training_batches, E_loss
+from functions import states_gen, seq_modules, H_SYK, training_batches, E_loss, trans_unique
 from calc_trans_states import double_trans, seed_matrix, dumb_syk_transitions
 from torch.linalg import eigh
 
@@ -11,15 +11,16 @@ seed = 1
 
 #region Parameters
 # Physical parameters of the SYK Model
-L = 8
+L = 4
 N = int(L/2)
 J = 1
+
 # NN Parameters
 net_dim = 256
 
 layers = 4
 lr = 0.01
-n_epoch = 10
+n_epoch = 3
 
 max_it = 200
 precision = 10
@@ -35,6 +36,13 @@ u, v = eigh (H)
 
 input_states = torch.tensor(states_gen(L, N), dtype=torch.long)
 trans_states = double_trans(input_states)
+print(trans_states.shape)
+
+trans_states = trans_unique(trans_states)
+
+print(trans_states.shape)
+
+
 syk = dumb_syk_transitions(seed_matrix(input_states, trans_states), seed)
 
 trans_states = torch.transpose(trans_states, 1, 2)
@@ -43,7 +51,7 @@ optimizer = torch.optim.Adam(Net.parameters(), lr)
 
 
 
-training_batches(n_epoch, optimizer, Net, input_states, trans_states, syk, u[0], max_it, precision, H)
+#training_batches(n_epoch, optimizer, Net, input_states, trans_states, syk, u[0], max_it, precision, H)
 
 
 

@@ -225,8 +225,10 @@ def training_batches(n_epoch, optimizer, seq_modules, input_states, trans_states
         
         norm = torch.tensordot(output1, output1, ([0], [0]))
         print("norm :", norm)
-        print("Energy with respect to the other hamiltonian : ", E_loss(output1, H))
+        
+        
         Energy = torch.sum(torch.mul(output1 ,torch.sum(torch.mul(syk, output2), dim = 1)))/norm
+        print("Temporary_energy:", Energy)
         if epoch == n_epoch-1:
             print("Exact Eg = ", Eg)
             #print("First_entry :", v0)
@@ -309,3 +311,20 @@ def complete_transitions(vec, L, N):
   out = torch.stack(tuple(map(single_transition_to_stack, vecs))).reshape((N**4, L))
   return torch.unique(out, dim = 0)
 
+def trans_unique(trans_states):
+    L = trans_states.shape[1]
+    bin = torch.flipud(2**torch.arange(0, L, 1))
+    trans_states = torch.tensordot(trans_states, bin, dims = ([1], [0]))
+
+
+
+    trans_states = list(torch.split(trans_states, 1, 0))
+    for i  in range(len(trans_states)):
+      trans_states[i]=torch.unique(trans_states[i])
+    trans_states = torch.stack(trans_states)
+    out = []
+    for i in range(L):
+      
+      out.append(torch.div(trans_states,(2**i), rounding_mode= 'floor'))
+    trans_states = torch.stack(out, dim = 1)%2
+    return trans_states
