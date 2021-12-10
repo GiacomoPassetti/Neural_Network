@@ -207,7 +207,7 @@ def training_batches(n_epoch, optimizer, seq_modules, input_states, trans_states
         
         
         
-        Energy = torch.sum(torch.mul(output1 ,torch.sum(torch.mul(syk, output2), dim = 1)))/norm
+        Energy = torch.sum(torch.mul(output1.squeeze() ,torch.sum(torch.mul(syk, output2), dim = 1)))/norm
         
         if epoch == n_epoch-1:
             print("after ", epoch, "epochs :")
@@ -226,7 +226,7 @@ def training_batches(n_epoch, optimizer, seq_modules, input_states, trans_states
       if i > max_it:
             print("Maximal_iterations exceeded")
             break
-    print("Final Energy", Energy) 
+    print("Final Energy", Energy/L) 
     return Energy/L
 #endregion
 
@@ -340,7 +340,7 @@ def trans_unique(trans_states):
     out = []
     for i in range(L):
       
-      out.append(torch.div(trans_states,(2**i), rounding_mode= 'floor'))
+      out.append(torch.div(trans_states,(2**(L - 1 - i)), rounding_mode= 'floor'))
     trans_states = torch.stack(out, dim = 1)%2
     return trans_states
 #endregion
