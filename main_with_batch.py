@@ -1,7 +1,12 @@
+
+# %%
+
 import torch
 from functions import states_gen, seq_modules, H_SYK, training_batches, E_loss, trans_unique
 from calc_trans_states import double_trans, seed_matrix, dumb_syk_transitions
 from torch.linalg import eigh
+import matplotlib.pyplot as plt 
+import numpy as np
 
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -11,7 +16,7 @@ seed = 1
 
 #region Parameters
 # Physical parameters of the SYK Model
-L = 10
+L = 6
 N = int(L/2)
 J = 1
 
@@ -20,38 +25,70 @@ net_dim = 256
 
 layers = 4
 lr = 0.01
-n_epoch = 3
+n_epoch = 10
 
-max_it = 200
+max_it = 100
 precision = 10
-momentum = 1
+momentum = 0.5
 #endregion
 
 # To check the actual implementation we are going to compare the energy to the ED of a full syk representation. Watch out that ED and NN will correspond to 2 different
 # random realizations.
 
-H = torch.tensor(H_SYK(L, N, J), dtype=torch.float)
-u, v = eigh (H)
+exact = []
+NN = []
+
+for L in list(np.arange(4, 12, 2)):
+    N = int(L/2)
+    H = torch.tensor(H_SYK(L, N, J), dtype=torch.float)
+
+    u, v = eigh (H)
+
+    input_states = torch.tensor(states_gen(L, N), dtype=torch.long)
+    trans_states = double_trans(input_states)
+    trans_states = trans_unique(trans_states)
+    syk = dumb_syk_transitions(seed_matrix(input_states, trans_states), seed, L)
+    trans_states = torch.transpose(trans_states, 1, 2)
+    Net = seq_modules(L, net_dim, layers)
+    #optimizer = torch.optim.Adam(Net.parameters(), lr)
+    optimizer = torch.optim.SGD(Net.parameters(), lr)
+    
+    exact.append(u[0]/L)
+    NN.append(training_batches(n_epoch, optimizer, Net, input_states, trans_states, syk, u[0]/L, max_it, precision, L))
 
 
-input_states = torch.tensor(states_gen(L, N), dtype=torch.long)
-trans_states = double_trans(input_states)
-print(trans_states.shape)
+# %%
+fig, ax = plt.subplots(dpi = 300)
+for i in range(len(NN)):
+    NN[i] = NN[i][0, 0].detach().numpy()
 
-trans_states = trans_unique(trans_states)
+#%%
 
-print(trans_states.shape)
+x1 = np.array(exact)
+x2 = np.array(NN)
+print(x2/x1)
+
+ax.plot(x2/x1, ls = "", marker = "x")
+#ax.plot(NN, ls = "", marker = "x")
+
+plt.show()
+# Check routine that verifies th gaussian distribution of the entries of the syk transitions:
+"""
+H = H.flatten()
+print(H.shape)
+H = H[H.nonzero(as_tuple=True)]
+
+print(H.shape)
+
+x = H.numpy()
+y = syk.flatten().numpy()
+
+#print(x.shape, y.shape)
 
 
-syk = dumb_syk_transitions(seed_matrix(input_states, trans_states), seed, L)
-
-trans_states = torch.transpose(trans_states, 1, 2)
-Net = seq_modules(L, net_dim, layers)
-optimizer = torch.optim.Adam(Net.parameters(), lr)
-
-
-
-training_batches(n_epoch, optimizer, Net, input_states, trans_states, syk, u[0], max_it, precision, H)
+plt.hist([x, y])
+plt.show()
+"""
 
 
 
@@ -59,4 +96,4 @@ training_batches(n_epoch, optimizer, Net, input_states, trans_states, syk, u[0],
 
 
 
-
+# %%
