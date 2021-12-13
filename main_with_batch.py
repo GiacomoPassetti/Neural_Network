@@ -54,39 +54,7 @@ optimizer = torch.optim.Adam(Net.parameters(), lr)
 training_batches(n_epoch, optimizer, Net, input_states, trans_states, syk, u[0]/L, max_it, precision, L)
 
 
-# %%
-fig, ax = plt.subplots(dpi = 300)
-for i in range(len(NN)):
-    NN[i] = NN[i][0, 0].detach().numpy()
 
-#%%
-
-x1 = np.array(exact)
-x2 = np.array(NN)
-print(x2/x1)
-
-ax.plot(x1, ls = "", marker = "x")
-ax.plot(x2, ls = "", marker = "x")
-#ax.plot(NN, ls = "", marker = "x")
-
-plt.show()
-# Check routine that verifies th gaussian distribution of the entries of the syk transitions:
-"""
-H = H.flatten()
-print(H.shape)
-H = H[H.nonzero(as_tuple=True)]
-
-print(H.shape)
-
-x = H.numpy()
-y = syk.flatten().numpy()
-
-#print(x.shape, y.shape)
-
-
-plt.hist([x, y])
-plt.show()
-"""
 
 
 
