@@ -109,4 +109,11 @@ class MCMCSamplerChains(BaseSampler):
         return sample
 
 if __name__ == '__main__':
-    pass
+    my_sample = ExactSampler(4)
+    my_chain = MCMCSamplerChains(10, 1, 10)
+    my_chain._update_sample()
+    
+
+
+
+
