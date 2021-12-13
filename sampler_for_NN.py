@@ -1,14 +1,37 @@
-import torch
-from functions import states_gen
+
 import random
 import numpy as np
 import itertools
+import torch
+from functions import seq_modules_sigmoid, states_gen, seq_modules, H_SYK, training_batches, E_loss, trans_unique
+from calc_trans_states import double_trans, seed_matrix, dumb_syk_transitions
+from torch.linalg import eigh
+import matplotlib.pyplot as plt 
+import numpy as np
 
-L = 4
+
+
+seed = 1
+
+#region Parameters
+# Physical parameters of the SYK Model
+L = 12
 N = int(L/2)
-bin = np.arange(0, L, 1)
-states = torch.tensor(states_gen(L, N), dtype= torch.float)
+J = 1
 
+batch_size = 8
+
+# NN Parameters
+net_dim = 256
+
+layers = 4
+lr = 0.005
+n_epoch = 10
+
+max_it = 100
+precision = 10
+momentum = 0.5
+#endregion
 
 
 
@@ -24,17 +47,27 @@ def batch_states_shuffler(batch_states, iterations):
     return new_batch
 
 
-batch_size = 8
-L = 12
-states = torch.zeros((batch_size, L))
+
+
+states = torch.zeros((batch_size, L), dtype=torch.long)
 states[0:int(batch_size/2), 0:int(L/2)] = 1
 states[int(batch_size/2):batch_size, int(L/2):L] = 1
-print(states)
-new_state = batch_states_shuffler(states, iterations = 10)
-print(new_state)
+
+initial_batch = batch_states_shuffler(states, iterations = 10)
+print(initial_batch)
+
+
+trans_states = double_trans(initial_batch)
+trans_states = trans_unique(trans_states)
+syk = dumb_syk_transitions(seed_matrix(initial_batch, trans_states), seed, L)
+trans_states = torch.transpose(trans_states, 1, 2)
+Net = seq_modules_sigmoid(L, net_dim, layers)
+optimizer = torch.optim.Adam(Net.parameters(), lr)
 
 
 
+output = (Net(initial_batch.type(torch.float))+1)/2
+print(output)
 
 
 

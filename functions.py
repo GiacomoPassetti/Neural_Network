@@ -267,7 +267,7 @@ def seq_modules_sigmoid(input_d, netdim, layers):
                     nets.append(nn.Linear(netdim, netdim))
                     nets.append(nn.ReLU())
                 nets.append(nn.Linear(netdim, 1))
-                nets.append(nn.Sigmoid)
+                nets.append(nn.Sigmoid())
                 
                 seq_mod = nn.Sequential(*nets)
                 return seq_mod
