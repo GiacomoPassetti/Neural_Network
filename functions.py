@@ -12,6 +12,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 from scipy.sparse import coo_matrix, csr_matrix
+from calc_trans_states import dumb_syk_transitions, seed_matrix, double_trans
 
 
 #region ED SYK model
@@ -199,6 +200,8 @@ def training_batches(n_epoch, optimizer, seq_modules, input_states, trans_states
         # (1) Initialise gradients
         optimizer.zero_grad()
         # (2) Forward pass
+
+
         output1 = seq_modules(input_states.type(torch.float))
         output2 = seq_modules(torch.reshape(trans_states.type(torch.float), (trans_states.shape[0]*trans_states.shape[1], trans_states.shape[2])))
         output2 = torch.reshape(output2 , (trans_states.shape[0], trans_states.shape[1]))
@@ -230,6 +233,31 @@ def training_batches(n_epoch, optimizer, seq_modules, input_states, trans_states
     return Energy/L
 #endregion
 
+def simple_epoch(n_epoch, optimizer, seq_modules, input_states, seed):
+    L = input_states.shape[1]
+    input_states = input_states.long()
+    trans_states = double_trans(input_states)
+    trans_states = trans_unique(trans_states)
+    syk = dumb_syk_transitions(seed_matrix(input_states, trans_states), seed, L)
+    trans_states = torch.transpose(trans_states, 1, 2)
+
+    for i in range(n_epoch):
+        # (1) Initialise gradients
+        optimizer.zero_grad()
+        # (2) Forward pass
+        output1 = seq_modules(input_states.type(torch.float))
+        output2 = seq_modules(torch.reshape(trans_states.type(torch.float), (trans_states.shape[0]*trans_states.shape[1], trans_states.shape[2])))
+        output2 = torch.reshape(output2 , (trans_states.shape[0], trans_states.shape[1]))
+        
+        norm = torch.tensordot(output1, output1, ([0], [0]))
+        Energy = torch.sum(torch.mul(output1.squeeze() ,torch.sum(torch.mul(syk, output2), dim = 1)))/norm
+         # (3) Backward
+        Energy.backward()
+        # (4) Compute the loss and update the weights
+        optimizer.step()
+
+    print("After ", n_epoch, " epochs,  E_ground =", Energy/L)
+    return Energy/L
 #region Networks generators
 class NeuralNetwork(nn.Module):
     def __init__(self):
@@ -385,8 +413,7 @@ def Markov_step(initial_batch, Net):
    accept[0,0] = 0
    proposed_batch = accept * proposed_batch + (1 - accept) * initial_batch
    new_prob = accept * update_prob + (1 - accept) * current_prob
-   return proposed_batch, new_prob
+   return proposed_batch, accept 
 
    #endregion
 
-   
