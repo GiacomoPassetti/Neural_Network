@@ -1,6 +1,5 @@
 import torch
-from functions import Markov_step, states_gen, seq_modules, trans_unique, batch_states_shuffler, simple_epoch
-
+from functions import Markov_step,  seq_modules, batch_states_shuffler, simple_epoch, training_full_batch
 from torch.linalg import eigh
 import matplotlib.pyplot as plt 
 import numpy as np
@@ -29,6 +28,9 @@ convergence = 0.00001
 
 
 #endregion
+
+
+
 
 
 """We define a random sparse batch of initial states, and the network"""

@@ -231,7 +231,7 @@ def training_batches(n_epoch, optimizer, seq_modules, input_states, trans_states
             break
     print("Final Energy", Energy/L) 
     return Energy/L
-#endregion
+
 
 def simple_epoch(n_epoch, optimizer, seq_modules, input_states, seed):
     L = input_states.shape[1]
@@ -258,6 +258,20 @@ def simple_epoch(n_epoch, optimizer, seq_modules, input_states, seed):
 
     print("After ", n_epoch, " epochs,  E_ground =", Energy/L)
     return Energy/L
+
+def training_full_batch(L, N, seed, net_dim, layers, lr, n_epoch, convergence): 
+    input_states = torch.tensor(states_gen(L, N), dtype=torch.long)
+    Net = seq_modules(L, net_dim, layers)
+    optimizer = torch.optim.Adam(Net.parameters(), lr)
+    E_old = 0
+    E_new = 1
+    while (abs(E_old - E_new) > convergence):
+        E_old = E_new
+        E_new = simple_epoch(n_epoch, optimizer, Net, input_states, seed)
+        
+    print("Final Energy :", E_new)
+
+
 #region Networks generators
 class NeuralNetwork(nn.Module):
     def __init__(self):
