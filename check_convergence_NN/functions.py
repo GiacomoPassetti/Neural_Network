@@ -283,7 +283,7 @@ def simple_epoch_full_batch(n_epoch, optimizer, seq_modules, input_states, trans
     print("After ", n_epoch, " epochs,  E_ground =", Energy/L)
     return Energy/L
 
-def training_full_batch(L, N, seed, net_dim, layers, lr, n_epoch, convergence, device): 
+def training_full_batch(L, N, seed, net_dim, layers, lrs, n_epoch, convergence, device): 
     input_states = torch.tensor(states_gen(L, N), dtype=torch.float, device = device)
 
     trans_states = double_trans(input_states)
@@ -292,12 +292,17 @@ def training_full_batch(L, N, seed, net_dim, layers, lr, n_epoch, convergence, d
     syk = dumb_syk_transitions(seed_matrix(input_states, trans_states, device), seed, L, device)
     trans_states = torch.transpose(trans_states, 1, 2)
     Net = seq_modules(L, net_dim, layers).to(device)
-    optimizer = torch.optim.Adam(Net.parameters(), lr)
-    E_old = 0
-    E_new = 1
-    while (abs(E_old - E_new) > convergence):
+    
+
+    for lr in lrs:
+     E_old = 0
+     E_new = 1    
+     optimizer = torch.optim.Adam(Net.parameters(), lr)
+     while (abs(E_old - E_new) > convergence):
+        
         E_old = E_new
         E_new = simple_epoch_full_batch(n_epoch, optimizer, Net, input_states, trans_states, syk)
+     print("At learning rate ", lr, "Energy converged to ", E_new)
         
     print("Final Energy :", E_new)
     return E_new.squeeze()
