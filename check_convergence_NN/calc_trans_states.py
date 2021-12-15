@@ -105,7 +105,7 @@ def seed_matrix(states, transitions, device):
         return trans_converted
 
 def dumb_syk_transitions( seed_matrix, seed, L , device):
-    seed_matrix = seed_matrix.cpu().numpy()
+    
     H_syk = torch.zeros(seed_matrix.shape, device = device, dtype = torch.float)
     for i in range(seed_matrix.shape[0]):
         for j in range(seed_matrix.shape[1]):

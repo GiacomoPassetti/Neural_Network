@@ -237,8 +237,7 @@ def simple_epoch(n_epoch, optimizer, seq_modules, input_states, seed, device):
     L = input_states.shape[1]
     input_states = input_states
     trans_states = double_trans(input_states)
-    print("Device of input :", input_states.get_device())
-    print("Device of trans_states :", trans_states.get_device())
+
     trans_states = trans_unique(trans_states, device)
     syk = dumb_syk_transitions(seed_matrix(input_states, trans_states, device), seed, L, device)
     trans_states = torch.transpose(trans_states, 1, 2)

@@ -4,6 +4,18 @@ import numpy as np
 
 top = 12
 
+x = []
+dev_NN = []
+energy_NN = []
+
+dev_ED = []
+energy_ED = []
+for i in range(4, 11):
+    dev_NN.append("NN_energy_L_"+str(L)+"avgs_"+str(iterations)+".npy")
+    energy_NN.append("NN_dev_L_"+str(L)+"avgs_"+str(iterations)+".npy")
+    
+    dev_ED.append()
+    energy_ED.append()
 x = np.arange(4, top, 2)
 y1 = np.load("NN_energy_up_to_10_20avgs.npy")
 dev1 = np.load("NN_std_up_to_10_20avgs.npy")/np.sqrt(20)
