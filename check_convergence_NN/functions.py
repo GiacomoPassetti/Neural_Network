@@ -233,20 +233,22 @@ def training_batches(n_epoch, optimizer, seq_modules, input_states, trans_states
     return Energy/L
 
 
-def simple_epoch(n_epoch, optimizer, seq_modules, input_states, seed):
+def simple_epoch(n_epoch, optimizer, seq_modules, input_states, seed, device):
     L = input_states.shape[1]
-    input_states = input_states.long()
+    input_states = input_states
     trans_states = double_trans(input_states)
-    trans_states = trans_unique(trans_states)
-    syk = dumb_syk_transitions(seed_matrix(input_states, trans_states), seed, L)
+    print("Device of input :", input_states.get_device())
+    print("Device of trans_states :", trans_states.get_device())
+    trans_states = trans_unique(trans_states, device)
+    syk = dumb_syk_transitions(seed_matrix(input_states, trans_states, device), seed, L, device)
     trans_states = torch.transpose(trans_states, 1, 2)
 
     for i in range(n_epoch):
         # (1) Initialise gradients
         optimizer.zero_grad()
         # (2) Forward pass
-        output1 = seq_modules(input_states.type(torch.float))
-        output2 = seq_modules(torch.reshape(trans_states.type(torch.float), (trans_states.shape[0]*trans_states.shape[1], trans_states.shape[2])))
+        output1 = seq_modules(input_states)
+        output2 = seq_modules(torch.reshape(trans_states, (trans_states.shape[0]*trans_states.shape[1], trans_states.shape[2])))
         output2 = torch.reshape(output2 , (trans_states.shape[0], trans_states.shape[1]))
         
         norm = torch.tensordot(output1, output1, ([0], [0]))
@@ -259,19 +261,47 @@ def simple_epoch(n_epoch, optimizer, seq_modules, input_states, seed):
     print("After ", n_epoch, " epochs,  E_ground =", Energy/L)
     return Energy/L
 
-def training_full_batch(L, N, seed, net_dim, layers, lr, n_epoch, convergence): 
-    input_states = torch.tensor(states_gen(L, N), dtype=torch.long)
-    Net = seq_modules(L, net_dim, layers)
+def simple_epoch_full_batch(n_epoch, optimizer, seq_modules, input_states, trans_states, syk):
+    L = input_states.shape[1]
+
+
+    for i in range(n_epoch):
+        # (1) Initialise gradients
+        optimizer.zero_grad()
+        # (2) Forward pass
+        output1 = seq_modules(input_states)
+        output2 = seq_modules(torch.reshape(trans_states, (trans_states.shape[0]*trans_states.shape[1], trans_states.shape[2])))
+        output2 = torch.reshape(output2 , (trans_states.shape[0], trans_states.shape[1]))
+        
+        norm = torch.tensordot(output1, output1, ([0], [0]))
+        Energy = torch.sum(torch.mul(output1.squeeze() ,torch.sum(torch.mul(syk, output2), dim = 1)))/norm
+         # (3) Backward
+        Energy.backward()
+        # (4) Compute the loss and update the weights
+        optimizer.step()
+
+    print("After ", n_epoch, " epochs,  E_ground =", Energy/L)
+    return Energy/L
+
+def training_full_batch(L, N, seed, net_dim, layers, lr, n_epoch, convergence, device): 
+    input_states = torch.tensor(states_gen(L, N), dtype=torch.float, device = device)
+
+    trans_states = double_trans(input_states)
+ 
+    trans_states = trans_unique(trans_states, device)
+    syk = dumb_syk_transitions(seed_matrix(input_states, trans_states, device), seed, L, device)
+    trans_states = torch.transpose(trans_states, 1, 2)
+    Net = seq_modules(L, net_dim, layers).to(device)
     optimizer = torch.optim.Adam(Net.parameters(), lr)
     E_old = 0
     E_new = 1
     while (abs(E_old - E_new) > convergence):
         E_old = E_new
-        E_new = simple_epoch(n_epoch, optimizer, Net, input_states, seed)
+        E_new = simple_epoch_full_batch(n_epoch, optimizer, Net, input_states, trans_states, syk)
         
     print("Final Energy :", E_new)
     return E_new.squeeze()
-
+#endregion
 
 #region Networks generators
 class NeuralNetwork(nn.Module):
@@ -365,13 +395,13 @@ def complete_transitions(vec, L, N):
   out = torch.stack(tuple(map(single_transition_to_stack, vecs))).reshape((N**4, L))
   return torch.unique(out, dim = 0)
 
-def trans_unique(trans_states):
+def trans_unique(trans_states, device):
     """
     This accepts tensors containg the allowed two particles transitions with shape [Batch, L, k] and shrinks along the k dimension eliminating the redundant states.
     returns tensor with shape [Batch, L, Batch_2nd_ord_transitions].
     """
     L = trans_states.shape[1]
-    bin = torch.flipud(2**torch.arange(0, L, 1))
+    bin = torch.flipud(2**torch.arange(0, L, 1, device = device, dtype = torch.float))
     trans_states = torch.tensordot(trans_states, bin, dims = ([1], [0]))
 
 

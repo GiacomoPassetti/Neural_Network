@@ -73,16 +73,16 @@ def double_trans(states):
     return double_trans_states
 
 
-def seed_matrix(states, transitions):
+def seed_matrix(states, transitions, device):
         """
         This takes as input the batch containing the trial states and their possible double transitions. It the matrix containing the seeds to generate the syk hamiltonian.
         """
         L = states.shape[1]
         batch_size = states.shape[0]
         num_trans = transitions.shape[2]
-        bin = torch.flipud(2**torch.arange(0, L, 1))
+        bin = torch.flipud(2**torch.arange(0, L, 1, device = device, dtype = torch.float))
         
-        NMax = (torch.tensordot(torch.ones(L, dtype = torch.long),bin, dims = ([0], [0])))
+        NMax = (torch.tensordot(torch.ones(L, dtype = torch.float, device = device ),bin, dims = ([0], [0])))
         
         
         # The transitions tensor get converted to the decimal base by contracting their L dimension. States gets repeated num_trans times to allow the states sorting. 
@@ -104,11 +104,14 @@ def seed_matrix(states, transitions):
         
         return trans_converted
 
-def dumb_syk_transitions( seed_matrix, seed, L ):
-    H_syk = torch.zeros(seed_matrix.shape)
+def dumb_syk_transitions( seed_matrix, seed, L , device):
+    seed_matrix = seed_matrix.cpu().numpy()
+    H_syk = torch.zeros(seed_matrix.shape, device = device, dtype = torch.float)
     for i in range(seed_matrix.shape[0]):
         for j in range(seed_matrix.shape[1]):
-            np.random.seed(seed_matrix[i, j]*seed)
+            seed_ij = int(seed_matrix[i, j]*seed)
+            
+            np.random.seed(seed_ij)
             
             H_syk[i, j] = np.random.normal(0, 1)*(4/((2*L)**(3/2)))
             
