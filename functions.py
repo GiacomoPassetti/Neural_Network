@@ -259,6 +259,38 @@ def simple_epoch(n_epoch, optimizer, seq_modules, input_states, seed):
     print("After ", n_epoch, " epochs,  E_ground =", Energy/L)
     return Energy/L
 
+def simple_epoch_MARKOV(n_epoch, optimizer, seq_modules, input_states, seed):
+    batch_size = input_states.shape[0]
+    L = input_states.shape[1]
+    input_states = input_states.long()
+    trans_states = double_trans(input_states)
+    trans_states = trans_unique(trans_states)
+    syk = dumb_syk_transitions(seed_matrix(input_states, trans_states), seed, L)
+    trans_states = torch.transpose(trans_states, 1, 2)
+
+    for i in range(n_epoch):
+        # (1) Initialise gradients
+        optimizer.zero_grad()
+        # (2) Forward pass
+        output1 = seq_modules(input_states.type(torch.float))
+        output2 = seq_modules(torch.reshape(trans_states.type(torch.float), (trans_states.shape[0]*trans_states.shape[1], trans_states.shape[2])))
+        output2 = torch.reshape(output2 , (trans_states.shape[0], trans_states.shape[1]))
+        
+        
+        local_energies = torch.div(torch.sum(torch.mul(syk, output2), dim = 1).squeeze(), output1.squeeze())
+        local_energy = torch.sum(local_energies).squeeze()
+        
+        # (3) Backward
+        local_energy.backward()
+        # (4) Compute the loss and update the weights
+        optimizer.step()
+
+
+    
+    energy_density = local_energies/L
+    print("After ", n_epoch, " epochs,  E_ground =", energy_density)
+    return energy_density
+
 def training_full_batch(L, N, seed, net_dim, layers, lr, n_epoch, convergence): 
     input_states = torch.tensor(states_gen(L, N), dtype=torch.long)
     Net = seq_modules(L, net_dim, layers)
@@ -271,6 +303,7 @@ def training_full_batch(L, N, seed, net_dim, layers, lr, n_epoch, convergence):
         
     print("Final Energy :", E_new)
 
+#endregion
 
 #region Networks generators
 class NeuralNetwork(nn.Module):
@@ -310,6 +343,17 @@ def seq_modules_sigmoid(input_d, netdim, layers):
                     nets.append(nn.ReLU())
                 nets.append(nn.Linear(netdim, 1))
                 nets.append(nn.Sigmoid())
+                
+                seq_mod = nn.Sequential(*nets)
+                return seq_mod
+def seq_modules_ReLU(input_d, netdim, layers):
+                flatten = nn.Flatten()
+                nets = [flatten,nn.Linear(input_d,  netdim),nn.ReLU()]
+                for i in range(layers):
+                    nets.append(nn.Linear(netdim, netdim))
+                    nets.append(nn.ReLU())
+                nets.append(nn.Linear(netdim, 1))
+                nets.append(nn.ReLU())
                 
                 seq_mod = nn.Sequential(*nets)
                 return seq_mod
@@ -424,10 +468,24 @@ def Markov_step(initial_batch, Net):
    update_prob = torch.mul(update_prob, update_prob)
    transition_prob = torch.clamp(update_prob / current_prob, 0, 1)
    accept = torch.bernoulli(transition_prob)
-   accept[0,0] = 0
+   
    proposed_batch = accept * proposed_batch + (1 - accept) * initial_batch
    new_prob = accept * update_prob + (1 - accept) * current_prob
-   return proposed_batch, accept 
+   return proposed_batch, new_prob 
+
+def Markov_step_double_batch(old_batch, new_batch, Net):
+   current_prob = Net(old_batch.type(torch.float))
+   current_prob = torch.mul(current_prob, current_prob) 
+   
+   update_prob = Net(new_batch.type(torch.float))
+   update_prob = torch.mul(update_prob, update_prob)
+   transition_prob = torch.clamp(update_prob / current_prob, 0, 1)
+   accept = torch.bernoulli(transition_prob)
+   
+   proposed_batch = accept * new_batch + (1 - accept) * old_batch
+   new_prob = accept * update_prob + (1 - accept) * current_prob
+   
+   return proposed_batch, new_prob
 
    #endregion
 

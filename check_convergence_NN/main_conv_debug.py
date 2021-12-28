@@ -18,14 +18,14 @@ print('Using {} device'.format(device))
 
 
 # NN Parameters
-net_dim = 600
+net_dim = 512
 
 layers = 3
 lrs = [0.0001, 0.00001, 0.000001]
 n_epoch = 30
 convergence = 0.00005
 
-iterations = 200
+iterations = 120
 
 
 #endregion
