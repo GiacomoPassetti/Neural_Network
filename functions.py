@@ -357,6 +357,21 @@ def seq_modules_ReLU(input_d, netdim, layers):
                 
                 seq_mod = nn.Sequential(*nets)
                 return seq_mod
+
+
+def seq_modules_seed(input_d, netdim, layers, seed):
+                torch.manual_seed(seed)
+                flatten = nn.Flatten()
+                nets = [flatten,nn.Linear(input_d,  netdim),nn.ReLU()]
+                for i in range(layers):
+                    nets.append(nn.Linear(netdim, netdim))
+                    nets.append(nn.ReLU())
+                nets.append(nn.Linear(netdim, 1))
+                
+                seq_mod = nn.Sequential(*nets)
+                return seq_mod
+
+
 #endregion
 
 #region Transitions SYK generators
@@ -488,4 +503,5 @@ def Markov_step_double_batch(old_batch, new_batch, Net):
    return proposed_batch, new_prob
 
    #endregion
+
 
