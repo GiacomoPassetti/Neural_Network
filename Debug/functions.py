@@ -12,6 +12,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from torchvision import datasets, transforms
 from scipy.sparse import coo_matrix, csr_matrix
+from calc_trans_states import dumb_syk_transitions, seed_matrix, double_trans
 
 
 #region ED SYK model
@@ -122,20 +123,6 @@ def H_SYK(L, N, J):
    
    return H
 
-def Trivial_op(L):
-   N = int(L/2)
-   M = states_gen(L, N)
-   dim = M.shape[0]
-   M = (M.dot(M.T))
-   M = M - (N-3)*np.ones((dim, dim))
-   M = np.clip(M, 0, N)
-   indi = M.nonzero()
-   data = np.ones((indi[0].shape[0]))
-   H = coo_matrix((data, indi), shape = (dim, dim))
-   H = H.todense()
-   
-   return H
-
 def Sparse_SYK(L , N, J):
    N = int(L/2)
    M = states_gen(L, N)
@@ -213,6 +200,8 @@ def training_batches(n_epoch, optimizer, seq_modules, input_states, trans_states
         # (1) Initialise gradients
         optimizer.zero_grad()
         # (2) Forward pass
+
+
         output1 = seq_modules(input_states.type(torch.float))
         output2 = seq_modules(torch.reshape(trans_states.type(torch.float), (trans_states.shape[0]*trans_states.shape[1], trans_states.shape[2])))
         output2 = torch.reshape(output2 , (trans_states.shape[0], trans_states.shape[1]))
@@ -242,6 +231,90 @@ def training_batches(n_epoch, optimizer, seq_modules, input_states, trans_states
             break
     print("Final Energy", Energy/L) 
     return Energy/L
+
+
+def simple_epoch(n_epoch, optimizer, seq_modules, input_states, seed):
+    L = input_states.shape[1]
+    input_states = input_states.long()
+    trans_states = double_trans(input_states)
+    trans_states = trans_unique(trans_states)
+    syk = dumb_syk_transitions(seed_matrix(input_states, trans_states), seed, L)
+    trans_states = torch.transpose(trans_states, 1, 2)
+
+    for i in range(n_epoch):
+        # (1) Initialise gradients
+        optimizer.zero_grad()
+        # (2) Forward pass
+        output1 = seq_modules(input_states.type(torch.float))
+        output2 = seq_modules(torch.reshape(trans_states.type(torch.float), (trans_states.shape[0]*trans_states.shape[1], trans_states.shape[2])))
+        output2 = torch.reshape(output2 , (trans_states.shape[0], trans_states.shape[1]))
+        
+        norm = torch.tensordot(output1, output1, ([0], [0]))
+        Energy = torch.sum(torch.mul(output1.squeeze() ,torch.sum(torch.mul(syk, output2), dim = 1)))/norm
+         # (3) Backward
+        Energy.backward()
+        # (4) Compute the loss and update the weights
+        optimizer.step()
+
+    print("After ", n_epoch, " epochs,  E_ground =", Energy/L)
+    return Energy/L
+
+def simple_epoch_MARKOV(n_epoch, optimizer, seq_modules, input_states, seed):
+    batch_size = input_states.shape[0]
+    L = input_states.shape[1]
+    input_states = input_states.long()
+    trans_states = double_trans(input_states)
+    trans_states = trans_unique(trans_states)
+    syk = dumb_syk_transitions(seed_matrix(input_states, trans_states), seed, L)
+    trans_states = torch.transpose(trans_states, 1, 2)
+
+    for i in range(n_epoch):
+        # (1) Initialise gradients
+        optimizer.zero_grad()
+        # (2) Forward pass
+        output1 = seq_modules(input_states.type(torch.float))
+        output2 = seq_modules(torch.reshape(trans_states.type(torch.float), (trans_states.shape[0]*trans_states.shape[1], trans_states.shape[2])))
+        output2 = torch.reshape(output2 , (trans_states.shape[0], trans_states.shape[1]))
+        
+        
+        local_energies = torch.div(torch.sum(torch.mul(syk, output2), dim = 1).squeeze(), output1.squeeze())
+        local_energy = torch.sum(local_energies).squeeze()
+        
+        # (3) Backward
+        local_energy.backward()
+        # (4) Compute the loss and update the weights
+        optimizer.step()
+
+
+    
+    energy_density = local_energies/L
+    print("After ", n_epoch, " epochs,  E_ground =", energy_density)
+    return energy_density
+
+def training_full_batch(L, N, seed, net_dim, layers, lr, n_epoch, convergence): 
+    input_states = torch.tensor(states_gen(L, N), dtype=torch.long)
+    Net = seq_modules(L, net_dim, layers)
+    optimizer = torch.optim.Adam(Net.parameters(), lr)
+    E_old = 0
+    E_new = 1
+    while (abs(E_old - E_new) > convergence):
+        E_old = E_new
+        E_new = simple_epoch(n_epoch, optimizer, Net, input_states, seed)
+        
+    print("Final Energy :", E_new)
+
+def local_energies_SYK(seq_modules, input_states, seed):
+    L = input_states.shape[1]
+    input_states = input_states.long()
+    trans_states = double_trans(input_states)
+    trans_states = trans_unique(trans_states)
+    syk = dumb_syk_transitions(seed_matrix(input_states, trans_states), seed, L)
+    trans_states = torch.transpose(trans_states, 1, 2)
+    output1 = seq_modules(input_states.type(torch.float))
+    output2 = seq_modules(torch.reshape(trans_states.type(torch.float), (trans_states.shape[0]*trans_states.shape[1], trans_states.shape[2])))
+    output2 = torch.reshape(output2 , (trans_states.shape[0], trans_states.shape[1]))
+    local_energies = torch.div(torch.sum(torch.mul(syk, output2), dim = 1).squeeze(), output1.squeeze())
+    return local_energies/L
 #endregion
 
 #region Networks generators
@@ -281,10 +354,36 @@ def seq_modules_sigmoid(input_d, netdim, layers):
                     nets.append(nn.Linear(netdim, netdim))
                     nets.append(nn.ReLU())
                 nets.append(nn.Linear(netdim, 1))
-                nets.append(nn.Sigmoid)
+                nets.append(nn.Sigmoid())
                 
                 seq_mod = nn.Sequential(*nets)
                 return seq_mod
+def seq_modules_ReLU(input_d, netdim, layers):
+                flatten = nn.Flatten()
+                nets = [flatten,nn.Linear(input_d,  netdim),nn.ReLU()]
+                for i in range(layers):
+                    nets.append(nn.Linear(netdim, netdim))
+                    nets.append(nn.ReLU())
+                nets.append(nn.Linear(netdim, 1))
+                nets.append(nn.ReLU())
+                
+                seq_mod = nn.Sequential(*nets)
+                return seq_mod
+
+
+def seq_modules_seed(input_d, netdim, layers, seed):
+                torch.manual_seed(seed)
+                flatten = nn.Flatten()
+                nets = [flatten,nn.Linear(input_d,  netdim),nn.ReLU()]
+                for i in range(layers):
+                    nets.append(nn.Linear(netdim, netdim))
+                    nets.append(nn.ReLU())
+                nets.append(nn.Linear(netdim, 1))
+                
+                seq_mod = nn.Sequential(*nets)
+                return seq_mod
+
+
 #endregion
 
 #region Transitions SYK generators
@@ -354,7 +453,67 @@ def trans_unique(trans_states):
     out = []
     for i in range(L):
       
-      out.append(torch.div(trans_states,(2**(L-1-i)), rounding_mode= 'floor'))
+      out.append(torch.div(trans_states,(2**(L - 1 - i)), rounding_mode= 'floor'))
     trans_states = torch.stack(out, dim = 1)%2
     return trans_states
 #endregion
+
+#region Markov Chain functions
+
+def batch_states_shuffler(batch_states, iterations):
+    "It expects a tensor of shape [N_batch, L] and returns a batch of randomly generated shuffles. At every iteration  corresponds a two indices swap for every vector of the batch "
+    L = batch_states.shape[1]
+    
+    index = torch.arange(batch_states.shape[0]).repeat(2, 1).T.flatten().unsqueeze(dim = 1)
+    new_batch = batch_states.clone()
+    for i in range(iterations):
+        ind_flip = torch.randint(low = 0, high = L, size = (batch_states.shape[0], 2))
+        new_batch[index, ind_flip.flatten().unsqueeze(dim = 1)] = new_batch[index, ind_flip.flip(dims = (1,) ).flatten().unsqueeze(dim = 1)]
+    return new_batch
+
+
+def shuffler_fast(batch_states):
+    "It expects a tensor of shape [N_batch, L] and returns a batch of randomly generated shuffles. At every iteration  corresponds a two indices swap for every vector of the batch "
+    L = batch_states.shape[1]
+    
+    index = torch.arange(batch_states.shape[0]).repeat(2, 1).T.flatten().unsqueeze(dim = 1)
+    new_batch = batch_states.clone()
+    
+    ind_flip = torch.randint(low = 0, high = L, size = (batch_states.shape[0], 2))
+    new_batch[index, ind_flip.flatten().unsqueeze(dim = 1)] = new_batch[index, ind_flip.flip(dims = (1,) ).flatten().unsqueeze(dim = 1)]
+    return new_batch
+
+
+
+
+def Markov_step(initial_batch, Net):
+
+   current_prob = Net(initial_batch.type(torch.float))
+   current_prob = torch.mul(current_prob, current_prob) 
+   proposed_batch = shuffler_fast(initial_batch)
+   update_prob = Net(proposed_batch.type(torch.float))
+   update_prob = torch.mul(update_prob, update_prob)
+   transition_prob = torch.clamp(update_prob / current_prob, 0, 1)
+   accept = torch.bernoulli(transition_prob)
+   
+   proposed_batch = accept * proposed_batch + (1 - accept) * initial_batch
+   new_prob = accept * update_prob + (1 - accept) * current_prob
+   return proposed_batch, new_prob 
+
+def Markov_step_double_batch(old_batch, new_batch, Net):
+   current_prob = Net(old_batch.type(torch.float))
+   current_prob = torch.mul(current_prob, current_prob) 
+   
+   update_prob = Net(new_batch.type(torch.float))
+   update_prob = torch.mul(update_prob, update_prob)
+   transition_prob = torch.clamp(update_prob / current_prob, 0, 1)
+   accept = torch.bernoulli(transition_prob)
+   
+   proposed_batch = accept * new_batch + (1 - accept) * old_batch
+   new_prob = accept * update_prob + (1 - accept) * current_prob
+   
+   return proposed_batch, new_prob
+
+   #endregion
+
+
