@@ -275,38 +275,6 @@ def simple_epoch_MARKOV(n_epoch, optimizer, seq_modules, input_states, seed):
         output1 = seq_modules(input_states.type(torch.float))
         output2 = seq_modules(torch.reshape(trans_states.type(torch.float), (trans_states.shape[0]*trans_states.shape[1], trans_states.shape[2])))
         output2 = torch.reshape(output2 , (trans_states.shape[0], trans_states.shape[1]))
-        
-        
-        local_energies = torch.div(torch.sum(torch.mul(syk, output2), dim = 1).squeeze(), output1.squeeze())
-        local_energy = torch.sum(local_energies).squeeze()
-        
-        # (3) Backward
-        local_energy.backward()
-        # (4) Compute the loss and update the weights
-        optimizer.step()
-
-
-    
-    energy_density = local_energies/L
-    #print("After ", n_epoch, " epochs,  E_ground =", energy_density)
-    return energy_density
-
-def simple_epoch_MARKOV_variant(n_epoch, optimizer, seq_modules, input_states, seed):
-    batch_size = input_states.shape[0]
-    L = input_states.shape[1]
-    input_states = input_states.long()
-    trans_states = double_trans(input_states)
-    trans_states = trans_unique(trans_states)
-    syk = dumb_syk_transitions(seed_matrix(input_states, trans_states), seed, L)
-    trans_states = torch.transpose(trans_states, 1, 2)
-
-    for i in range(n_epoch):
-        # (1) Initialise gradients
-        optimizer.zero_grad()
-        # (2) Forward pass
-        output1 = seq_modules(input_states.type(torch.float))
-        output2 = seq_modules(torch.reshape(trans_states.type(torch.float), (trans_states.shape[0]*trans_states.shape[1], trans_states.shape[2])))
-        output2 = torch.reshape(output2 , (trans_states.shape[0], trans_states.shape[1]))
         probs = torch.mul(output1, output1).squeeze()
         pseudo_norm = torch.sqrt(torch.sum(probs)).squeeze()
         
@@ -554,4 +522,8 @@ def Markov_step_double_batch(old_batch, new_batch, Net):
 
    #endregion
 
+#region Binning Analysis
+def statistical_error(sampled_energy):
 
+
+#endregion
