@@ -175,13 +175,12 @@ def simple_epoch(n_epoch, optimizer, seq_modules, input_states, seed):
 def training_full_batch(L, N, seed, net_dim, layers, lr, n_epoch, convergence): 
     """This routine generates the states of the full Hilbert space and optimizes the ground state energy
     It returns the trained network"""
-    
     input_states = torch.tensor(states_gen(L, N), dtype=torch.long)
     Net = seq_modules(L, net_dim, layers)
     optimizer = torch.optim.Adam(Net.parameters(), lr)
     E_old = 0
     E_new = 1
-    print("Network initialized, looking for the ground state :")
+    
     while (abs(E_old - E_new) > convergence):
         E_old = E_new
         E_new = simple_epoch(n_epoch, optimizer, Net, input_states, seed)
