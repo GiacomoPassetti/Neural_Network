@@ -17,7 +17,6 @@ from calc_trans_states import dumb_syk_transitions, seed_matrix, double_trans
 
 #region ED SYK model
 
-
 def states_gen(L,N):
     which = np.array(list(itertools.combinations(range(L), N)))
     #print(which)
@@ -139,8 +138,6 @@ def Sparse_SYK(L , N, J):
    H = (np.triu(H)+ np.triu(H).T - np.diag(np.diag(H)))*(4/((2*L)**(3/2)))
    H = scipy.sparse.csc_matrix(H)
    return H
-
-
 
 #endregion
 
@@ -449,7 +446,7 @@ def single_chain(batch_chain, tau, Net):
     
     
 
-   #endregion
+#endregion
 
 
         
