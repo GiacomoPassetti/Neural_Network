@@ -45,7 +45,7 @@ batch_size = 20
 """training_full_batch returns a Network trained with respect to the exact energy up to a convergence factor setted by --convergence--"""
 Net = training_full_batch(L, N, seed, net_dim, layers, lr, n_epoch, convergence)
 optimizer = torch.optim.Adam(Net.parameters(), lr)
-states = torch.tensor(states_gen(L, N))
+states = torch.zeros((batch_size, L), dtype=torch.long)
 states[0:int(batch_size/2), 0:int(L/2)] = 1
 states[int(batch_size/2):batch_size, int(L/2):L] = 1
 batch_states = batch_states_shuffler(states, iterations = 20)
