@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def Quantum_Geometric_Tensor(batch_states, Net):
+def Quantum_Geometric_Tensor(batch_states, Net, layers):
     """This implementation is based on the Supplementary of Carleo, Troyer Science 2017
     Batch states is a tensor that contains all the states that are montecarlo sampled,
     batch_states.shape[0] Is the dimension of the sampling and batch_state.shape[1] is the Hilbert dimension.
