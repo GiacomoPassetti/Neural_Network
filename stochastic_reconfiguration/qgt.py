@@ -63,7 +63,7 @@ def Energy_gradient(batch_states, Net, seed, layers ):
               w_b.append(torch.flatten(Net[1+(2*i)].bias.grad))
             w_b = torch.cat(w_b)/Psi_s
             O_i += w_b
-            E_O_i += E_loc[mk+1]*O_i
+            E_O_i += E_loc[mk+1]*w_b
     E_grad = (E_O_i)/b_s - (torch.mean(E_loc)*O_i/(b_s**2))
     return E_grad
             
