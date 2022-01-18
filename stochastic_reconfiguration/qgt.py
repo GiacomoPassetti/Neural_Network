@@ -36,9 +36,9 @@ def Quantum_Geometric_Tensor(batch_states, Net, layers):
             w_b = torch.cat(w_b)/Psi_s
             O_i += w_b
             O_i_k += torch.tensordot(w_b, w_b, 0)
-    QGT = O_i_k - torch.tensordot(O_i, O_i, 0)
+    QGT = O_i_k/b_s - torch.tensordot(O_i, O_i, 0)/(b_s**2)
     
-    return QGT/b_s
+    return QGT
 
 def Energy_gradient(batch_states, Net, seed, layers ):
     b_s = batch_states.shape[0]
@@ -64,7 +64,7 @@ def Energy_gradient(batch_states, Net, seed, layers ):
             w_b = torch.cat(w_b)/Psi_s
             O_i += w_b
             E_O_i += E_loc[mk+1]*w_b
-    E_grad = (E_O_i)/b_s - (torch.mean(E_loc)*O_i/(b_s**2))
+    E_grad = (E_O_i)/b_s - (torch.mean(E_loc)*O_i/(b_s))
     return E_grad
             
 def Update_weights(Net, QGT, E_grad, gamma, layers, net_dim, L):
