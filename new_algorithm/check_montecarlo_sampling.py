@@ -14,15 +14,15 @@ print('Using {} device'.format(device))
 
 #region Parameters
 # Physical parameters of the SYK Model
-L = 8
+L = 6
 N = int(L/2)
 J = 1
 seed = 2
 
 
 # NN Parameters
-net_dim = 512
-layers = 3
+net_dim = 60
+layers = 1
 lr = 0.005
 n_epoch = 50
 momentum = 0.5
