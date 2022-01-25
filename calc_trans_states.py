@@ -22,6 +22,8 @@ def single_trans(states):
     # and the annihilator is a matrix of all positions where a one can be removed
     generator = torch.diag_embed(torch.ones_like(states) - states)
     annihilator = - torch.diag_embed(states)
+    
+
 
     # deletion of zero rows flattens tensor along batch axes. 
     # since the number of zero rows per batch element is always the same,
@@ -29,11 +31,16 @@ def single_trans(states):
     annihilator = annihilator[~torch.all(annihilator == 0, axis=1)].reshape(batch_size, -1, L)
     generator = generator[~torch.all(generator == 0, axis=1)].reshape(batch_size, -1, L)
 
+
+
     # to find all combinations of generator and annihilator,
     # stack the generator matrix and repeat the annihilator rowwise
     op_len = annihilator.shape[1]
     generator = generator.repeat(1,op_len,1)
     annihilator = annihilator.repeat_interleave(op_len, dim=1)
+
+    print(generator)
+    print(annihilator)
 
     # add all possible combinations of annihilator and generator to input state 
     # to get all single transition states
@@ -118,8 +125,5 @@ def dumb_syk_transitions( seed_matrix, seed, L ):
 
 
 if __name__ == '__main__':
-    states = torch.tensor([[1,1,0,0],[1,0,0,1]])
-    print(states.dtype)
-    trans = double_trans(states)
-    seeds = seed_matrix(states, trans)
-    syk = dumb_syk_transitions(seeds, 1, 4)
+    states = torch.tensor([[1,1,1,0,0,0]])
+    print(single_trans(states))
